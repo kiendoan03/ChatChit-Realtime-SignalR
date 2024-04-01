@@ -8,8 +8,8 @@
         public string FromUserId { get; set; }
         public User FromUser { get; set; } = null!;
         public string? ToUserId { get; set; }
-        public User? ToUser { get; set; }
+        public User ToUser { get; set; } = null!;
         public int? RoomId { get; set; }
-        public Room? ToRoom { get; set; }
+        public Room ToRoom { get; set; } = null!;
     }
 }

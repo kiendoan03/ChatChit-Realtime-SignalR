@@ -10,8 +10,9 @@ namespace ChatChit.AutoMap
         public MessageProfile()
         {
             CreateMap<Message, MessageViewModel>()
-                .ForMember(dest => dest.From, opt => opt.MapFrom(src => src.FromUser.DisplayName))
-                .ForMember(dest => dest.To, opt => opt.MapFrom(src => src.ToRoom.RoomName))
+                .ForMember(dest => dest.FromUser, opt => opt.MapFrom(src => src.FromUser.DisplayName))
+                .ForMember(dest => dest.ToUser, opt => opt.MapFrom(src => src.ToUser.DisplayName))
+                .ForMember(dest => dest.Room, opt => opt.MapFrom(src => src.ToRoom.RoomName))
                 .ForMember(dest => dest.Avatar, opt => opt.MapFrom(src => src.FromUser.Avatar))
                 .ForMember(dest => dest.Content, opt => opt.MapFrom(x => BasicEmojis.ParseEmojis(x.Content)));
 

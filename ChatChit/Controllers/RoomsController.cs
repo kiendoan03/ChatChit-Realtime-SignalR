@@ -29,10 +29,12 @@ namespace ChatChit.Controllers
        
         [HttpGet] 
         [Authorize]
-        public async Task<ActionResult<IEnumerable<RoomViewModel>>> GetRooms()
+        public async Task<ActionResult<IEnumerable<RoomViewModel>>> GetRooms(string userId)
         {
             var rooms = await _context.Rooms
                  .Include(r => r.Admin)
+                 .Include(ur => ur.UserRoom)
+                 .Where(ur => ur.UserRoom.Any(ur => ur.UserId == userId))
                  .ToListAsync();
 
             var roomsViewModel = _mapper.Map<IEnumerable<Room>, IEnumerable<RoomViewModel>>(rooms);
@@ -63,7 +65,7 @@ namespace ChatChit.Controllers
             var claimsPrincipal = HttpContext.User;
             if (_context.Rooms.Any(r => r.RoomName == roomViewModel.RoomName))
                 return BadRequest("Invalid room name or room already exists");
-            var userIdClaim = claimsPrincipal.FindFirst("UserId");
+            var userIdClaim = claimsPrincipal.FindFirst("UserId");  
             var userId = userIdClaim.Value;
             var user = _context.Users.FirstOrDefault(u => u.Id == userId);
             var room = new Room() { RoomName = roomViewModel.RoomName, Admin = user };

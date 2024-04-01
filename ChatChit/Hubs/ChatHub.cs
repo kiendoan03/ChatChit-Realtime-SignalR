@@ -3,6 +3,7 @@ using ChatChit.DAL;
 using ChatChit.Models;
 using ChatChit.ViewModel;
 using Microsoft.AspNetCore.SignalR;
+using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
 
 namespace ChatChit.Hubs
@@ -29,9 +30,17 @@ namespace ChatChit.Hubs
             await Clients.Caller.SendAsync("ReceiveUserActive", user);
         }
 
+        public async Task GetChatHistoryLobby()
+        {
+            var messages = await _context.Messages.Where(m => m.RoomId == null && m.ToUserId == null).Include(m => m.FromUser).ToListAsync();
+            var messagesViewModel = _mapper.Map<List<Message>, List<MessageViewModel>>(messages);
+            await Clients.Caller.SendAsync("ReceiveChatHistoryLobby", messagesViewModel);
+            //await Clients.Caller.SendAsync("ReceiveMessage", messagesViewModel);
+        }
+
         public async Task SendMessage(string userId, string message)
         {
-            var user = await _context.Users.FindAsync(userId);  
+            var user = await _context.Users.FindAsync(userId);
             var mgs = new Message
             {
                 FromUserId = userId,
@@ -40,10 +49,12 @@ namespace ChatChit.Hubs
             };
             _context.Messages.Add(mgs);
             await _context.SaveChangesAsync();
-            await Clients.All.SendAsync("ReceiveMessage", user.DisplayName, message);
+            var messageViewModel = _mapper.Map<Message, MessageViewModel>(mgs);
+            //await Clients.All.SendAsync("ReceiveMessage", user.DisplayName, message);
+            await Clients.All.SendAsync("ReceiveMessage", messageViewModel);
         }
 
-        public async Task SendPrivate( string fromUserId,string toUserId, string message)
+        public async Task SendPrivate(string fromUserId, string toUserId, string message)
         {
             //var fromUserId = Context.ConnectionId;
             var mgs = new Message
@@ -55,24 +66,54 @@ namespace ChatChit.Hubs
             _context.Messages.Add(mgs);
             await _context.SaveChangesAsync();
             var messageViewModel = _mapper.Map<Message, MessageViewModel>(mgs);
-            await Clients.Client(fromUserId).SendAsync("newMessage", messageViewModel.Content);
-            await Clients.Caller.SendAsync("newMessage", messageViewModel.Content);
+            await Clients.Client(fromUserId).SendAsync("ReceiveMessage", messageViewModel);
+            await Clients.Caller.SendAsync("ReceiveMessage", messageViewModel);
         }
 
-        public async Task SendToRoom(int roomId, string userId, string message)
+        public async Task SendToRoom(string userId,string roomId, string message)
         {
-            var mgs = new Message
+            try
             {
-                RoomId = roomId,
-                FromUserId = userId,
-                Content = Regex.Replace(message, @"<.*?>", string.Empty),
-            };
-            _context.Messages.Add(mgs);
-            await _context.SaveChangesAsync();
-            var messagesVielModel = _mapper.Map<Message, MessageViewModel>(mgs);
-            var user = await _context.Users.FindAsync(userId);
-            var room = await _context.Rooms.FindAsync(roomId);
-            await Clients.Group(room.RoomName).SendAsync("ReceiveMessage", user.DisplayName, messagesVielModel);
+                int.TryParse(roomId, out int roomIdInt);
+                 var room = await _context.Rooms.FindAsync(roomIdInt);
+                if (room == null)
+                {
+                    Console.WriteLine("Room not found!");
+                    return;
+                }
+
+                Console.WriteLine($"Sending message to room {room.RoomName}...");
+
+                await Groups.AddToGroupAsync(Context.ConnectionId, room.RoomName);
+                var user = await _context.Users.FindAsync(userId);
+
+                var mgs = new Message
+                {
+                    FromUserId = userId,
+                    RoomId = roomIdInt,
+                    Content = Regex.Replace(message, @"<.*?>", string.Empty),
+                    SendAt = DateTime.Now
+                };
+                _context.Messages.Add(mgs);
+                await _context.SaveChangesAsync();
+                var messagesVielModel = _mapper.Map<Message, MessageViewModel>(mgs);
+
+                await Clients.Group(room.RoomName).SendAsync("ReceiveMessage", messagesVielModel);
+
+                Console.WriteLine("Message sent successfully.");
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Error sending message: {ex.Message}");
+            }
+        }
+
+        public async Task GetHistoryChatRoom(string roomId)
+        {
+            int.TryParse(roomId, out int roomIdInt);
+            var messages = await _context.Messages.Where(m => m.RoomId == roomIdInt).Include(m => m.FromUser).ToListAsync();
+            var messagesViewModel = _mapper.Map<List<Message>, List<MessageViewModel>>(messages);
+            await Clients.Caller.SendAsync("ReceiveChatHistoryRoom", messagesViewModel);
         }
 
         public async Task AddUserToRoom(int roomId, string userId)
@@ -84,7 +125,7 @@ namespace ChatChit.Hubs
                 Role = 0
             };
             _context.UserRooms.Add(userRoom);
-            await _context.SaveChangesAsync();
+            await _context.SaveChangesAsync();  
 
             var room = await _context.Rooms.FindAsync(roomId);
             await Groups.AddToGroupAsync(Context.ConnectionId, room.RoomName);
