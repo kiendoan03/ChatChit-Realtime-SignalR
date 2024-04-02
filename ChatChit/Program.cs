@@ -10,6 +10,8 @@ using Microsoft.IdentityModel.Tokens;
 using Microsoft.OpenApi.Models;
 using Swashbuckle.AspNetCore.Filters;
 using Microsoft.Extensions.DependencyInjection;
+using ChatChit.Repositories.Interfaces;
+using ChatChit.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -95,8 +97,11 @@ builder.Services.AddAuthentication(options =>
 
 builder.Services.AddAuthorization();
 
+builder.Services.AddTransient<IUnitOfWork, UnitOfWork>();
+
 builder.Services.AddScoped<ITokenService, TokenService>();
 builder.Services.AddScoped<IAccountService, AccountService>();
+builder.Services.AddScoped<IUserService, UserService>();
 
 builder.Services.AddDbContext<ChatDbContext>(opt =>
 {
