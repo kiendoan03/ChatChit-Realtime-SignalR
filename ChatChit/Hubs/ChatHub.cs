@@ -98,7 +98,7 @@ namespace ChatChit.Hubs
                 await _context.SaveChangesAsync();
                 var messagesVielModel = _mapper.Map<Message, MessageViewModel>(mgs);
 
-                await Clients.Group(room.RoomName).SendAsync("ReceiveMessage", messagesVielModel);
+                await Clients.Group(room.RoomName).SendAsync("ReceiveMessageRoom", messagesVielModel);
 
                 Console.WriteLine("Message sent successfully.");
             }
@@ -130,6 +130,7 @@ namespace ChatChit.Hubs
             var room = await _context.Rooms.FindAsync(roomId);
             await Groups.AddToGroupAsync(Context.ConnectionId, room.RoomName);
             await Clients.Group(room.RoomName).SendAsync("ReceiveMessage", "System", $"{Context.ConnectionId} joined {room.RoomName}");
+            await Clients.Caller.SendAsync("ReceiveMessage", "System", $"You joined {room.RoomName}");
         }
 
         public async Task RemoveUserToRoom(int roomId, string userId)
