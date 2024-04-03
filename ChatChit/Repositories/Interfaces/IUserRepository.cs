@@ -7,5 +7,6 @@ namespace ChatChit.Repositories.Interfaces
         Task<IEnumerable<User>> GetUserByName(string name);
         Task<User> GetUserByPhone(string phone);
         Task<IEnumerable<User>> GetUserNotInGroup(int groupId);
+        Task<IEnumerable<User>> GetUserExceptMe(string userId);
     }
 }

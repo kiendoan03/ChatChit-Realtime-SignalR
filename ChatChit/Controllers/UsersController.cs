@@ -49,5 +49,12 @@ namespace ChatChit.Controllers
             return Ok(await _userService.GetUserNotInGroup(groupId));
         }
 
+        [HttpGet]
+        [Route("GetUserExceptMe")]
+        public async Task<ActionResult<IEnumerable<UserViewModel>>> GetUserExceptMe(string userId)
+        {
+            return Ok(await _userService.GetUserExceptMe(userId));
+        }
+
     }
 }

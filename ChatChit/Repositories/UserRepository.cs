@@ -21,6 +21,11 @@ namespace ChatChit.Repositories
             return await _context.Users.FirstOrDefaultAsync(u => u.PhoneNumber == phone);
         }
 
+        public async Task<IEnumerable<User>> GetUserExceptMe(string userId)
+        {
+            return await _context.Users.Where(u => u.Id != userId).ToListAsync();
+        }
+
         public async Task<IEnumerable<User>> GetUserNotInGroup(int groupId)
         {
             var group = await _context.Rooms.Include(g => g.UserRoom).FirstOrDefaultAsync(g => g.Id == groupId);  

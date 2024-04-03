@@ -56,5 +56,11 @@ namespace ChatChit.Services
             var users = await _unitOfWork.UserRepository.GetUserNotInGroup(groupId);
             return _mapper.Map<IEnumerable<UserViewModel>>(users);
         }
+
+        public async Task<IEnumerable<UserViewModel>> GetUserExceptMe(string userId)
+        {
+            var users = await _unitOfWork.UserRepository.GetUserExceptMe(userId);
+            return _mapper.Map<IEnumerable<UserViewModel>>(users);
+        }
     }
 }

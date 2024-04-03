@@ -12,6 +12,9 @@ namespace ChatChit.Hubs
     {
         private readonly ChatDbContext _context;
         private readonly IMapper _mapper;
+        public readonly static List<UserViewModel> _Connections = new List<UserViewModel>();
+        private readonly static Dictionary<string, string> _ConnectionsMap = new Dictionary<string, string>();
+
 
         public ChatHub(ChatDbContext context, IMapper mapper)
         {
@@ -32,10 +35,12 @@ namespace ChatChit.Hubs
 
         public async Task GetChatHistoryLobby()
         {
+            //var messages = await _context.Messages.Where(m => m.RoomId == null && m.ToUserId == null).Include(m => m.FromUser).ToListAsync();
+            //var messagesViewModel = _mapper.Map<List<Message>, List<MessageViewModel>>(messages);
+            //await Clients.Caller.SendAsync("ReceiveChatHistoryLobby", messagesViewModel);
             var messages = await _context.Messages.Where(m => m.RoomId == null && m.ToUserId == null).Include(m => m.FromUser).ToListAsync();
             var messagesViewModel = _mapper.Map<List<Message>, List<MessageViewModel>>(messages);
             await Clients.Caller.SendAsync("ReceiveChatHistoryLobby", messagesViewModel);
-            //await Clients.Caller.SendAsync("ReceiveMessage", messagesViewModel);
         }
 
         public async Task SendMessage(string userId, string message)
@@ -57,17 +62,29 @@ namespace ChatChit.Hubs
         public async Task SendPrivate(string fromUserId, string toUserId, string message)
         {
             //var fromUserId = Context.ConnectionId;
+            var sender = await _context.Users.FindAsync(fromUserId);
+            var receiver = await _context.Users.FindAsync(toUserId);
+
             var mgs = new Message
             {
                 FromUserId = fromUserId,
                 ToUserId = toUserId,
                 Content = Regex.Replace(message, @"<.*?>", string.Empty),
+                SendAt = DateTime.Now
             };
             _context.Messages.Add(mgs);
             await _context.SaveChangesAsync();
             var messageViewModel = _mapper.Map<Message, MessageViewModel>(mgs);
-            await Clients.Client(fromUserId).SendAsync("ReceiveMessage", messageViewModel);
-            await Clients.Caller.SendAsync("ReceiveMessage", messageViewModel);
+
+            await Clients.All.SendAsync("ReceiveMessagePrivate" + toUserId, messageViewModel);
+            await Clients.Caller.SendAsync("ReceiveMessagePrivate", messageViewModel);
+        }
+
+        public async Task GetHistoryChatPrivate(string senderId, string receiveId)
+        {
+            var messages = await _context.Messages.Where(m => m.FromUserId == senderId && m.ToUserId == receiveId || m.FromUserId == receiveId && m.ToUserId == senderId).Include(m => m.FromUser).ToListAsync();
+            var messagesViewModel = _mapper.Map<List<Message>, List<MessageViewModel>>(messages);
+            await Clients.Caller.SendAsync("ReceiveChatHistoryPrivate", messagesViewModel);
         }
 
         public async Task SendToRoom(string userId,string roomId, string message)
@@ -98,7 +115,7 @@ namespace ChatChit.Hubs
                 await _context.SaveChangesAsync();
                 var messagesVielModel = _mapper.Map<Message, MessageViewModel>(mgs);
 
-                await Clients.Group(room.RoomName).SendAsync("ReceiveMessageRoom", messagesVielModel);
+                await Clients.Group(room.RoomName).SendAsync("ReceiveMessageRoom" + roomId , messagesVielModel);
 
                 Console.WriteLine("Message sent successfully.");
             }
@@ -129,8 +146,22 @@ namespace ChatChit.Hubs
 
             var room = await _context.Rooms.FindAsync(roomId);
             await Groups.AddToGroupAsync(Context.ConnectionId, room.RoomName);
-            await Clients.Group(room.RoomName).SendAsync("ReceiveMessage", "System", $"{Context.ConnectionId} joined {room.RoomName}");
-            await Clients.Caller.SendAsync("ReceiveMessage", "System", $"You joined {room.RoomName}");
+            //await Clients.Group(room.RoomName).SendAsync("ReceiveMessage", "System", $"{Context.ConnectionId} joined {room.RoomName}");
+            //await Clients.Caller.SendAsync("ReceiveNotifyJoinANewRoom", "System", $"You joined {room.RoomName}");
+            //await Clients.Caller.SendAsync("JoinNewGroup", room);
+            await Clients.User(userId).SendAsync("JoinNewGroup", room);
+
+        }
+
+        public async Task LeaveRoom(int roomId, string userId)
+        {
+            //int.TryParse(roomId, out int roomIdInt);
+            var userRoom = await _context.UserRooms.Where(ur => ur.RoomId == roomId && ur.UserId == userId).FirstOrDefaultAsync();
+            _context.UserRooms.Remove(userRoom);
+            await _context.SaveChangesAsync();
+            var room = await _context.Rooms.FindAsync(roomId);
+            await Groups.RemoveFromGroupAsync(Context.ConnectionId, room.RoomName);
+            await Clients.Group(room.RoomName).SendAsync("ReceiveMessage", "System", $"{Context.ConnectionId} left {room.RoomName}");
         }
 
         public async Task RemoveUserToRoom(int roomId, string userId)
@@ -142,6 +173,11 @@ namespace ChatChit.Hubs
             var room = await _context.Rooms.FindAsync(roomId);
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, room.RoomName);
             await Clients.Group(room.RoomName).SendAsync("ReceiveMessage", "System", $"{Context.ConnectionId} left {room.RoomName}");
+        }
+
+        private string IdentityName
+        {
+            get { return Context.User.Identity.Name; }
         }
     }
 }

@@ -11,5 +11,6 @@ namespace ChatChit.Services.Interfaces
         Task<UserViewModel> GetUserByPhone(string phone);
         Task EditUser(UserViewModel user);
         Task <IEnumerable<UserViewModel>> GetUserNotInGroup(int groupId);
+        Task<IEnumerable<UserViewModel>> GetUserExceptMe(string userId);
     }
 }
