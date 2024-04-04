@@ -27,7 +27,8 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Folder Include="wwwroot\images\avatar\" />
+	  <Folder Include="wwwroot\images\avatar\" />
+	  <Folder Include="wwwroot\images\emojis\" />
   </ItemGroup>
 
 </Project>

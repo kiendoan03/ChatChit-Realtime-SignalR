@@ -133,6 +133,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 app.UseCors("VueCorsPolicy");
+app.UseStaticFiles();
 
 app.MapHub<ChatHub>("/chatHub");
 
