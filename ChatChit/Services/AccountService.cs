@@ -66,7 +66,7 @@ namespace ChatChit.Services
             {
                 UserName = registerViewModel.Username,
                 DisplayName = registerViewModel.DisplayName,
-                Avatar = registerViewModel.Avatar
+                Avatar = registerViewModel.Avatar,
             };
 
             var result = await _userManager.CreateAsync(user, registerViewModel.Password);
@@ -77,6 +77,7 @@ namespace ChatChit.Services
 
             var userViewModel = new UserViewModel
             {
+                Id = user.Id,
                 UserName = user.UserName,
                 DisplayName = user.DisplayName,
                 Avatar = user.Avatar,
