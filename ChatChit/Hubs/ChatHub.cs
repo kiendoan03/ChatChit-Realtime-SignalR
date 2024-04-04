@@ -33,6 +33,13 @@ namespace ChatChit.Hubs
             await Clients.Caller.SendAsync("ReceiveUserActive", user);
         }
 
+        public async Task GetUserExceptMe(string userId)
+        {
+            var users = await _context.Users.Where(u => u.Id != userId).ToListAsync();
+            var usersViewModel = _mapper.Map<List<User>, List<UserViewModel>>(users);
+            await Clients.Caller.SendAsync("ReceiveUserExceptMe", usersViewModel);
+        }
+
         public async Task GetChatHistoryLobby()
         {
             //var messages = await _context.Messages.Where(m => m.RoomId == null && m.ToUserId == null).Include(m => m.FromUser).ToListAsync();
@@ -143,16 +150,17 @@ namespace ChatChit.Hubs
             };
             _context.UserRooms.Add(userRoom);
             await _context.SaveChangesAsync();  
-
+            var user = await _context.Users.FindAsync(userId);
+            var userViewModel = _mapper.Map<User, UserViewModel>(user);
             var room = await _context.Rooms.FindAsync(roomId);
             var roomViewModel = _mapper.Map<Room, RoomViewModel>(room);
             await Groups.AddToGroupAsync(Context.ConnectionId, room.RoomName);
             //await Clients.Group(room.RoomName).SendAsync("ReceiveMessage", "System", $"{Context.ConnectionId} joined {room.RoomName}");
             //await Clients.Caller.SendAsync("ReceiveNotifyJoinANewRoom", "System", $"You joined {room.RoomName}");
             //await Clients.Caller.SendAsync("JoinNewGroup", room);
-            await Clients.User(userId).SendAsync("JoinNewGroup", roomViewModel);
+            //await Clients.User(userId).SendAsync("JoinNewGroup", roomViewModel);
             await Clients.All.SendAsync("JoinNewGroup" + userId, roomViewModel);
-            await Clients.Group(room.RoomName).SendAsync("ReceiveMessageNewMem", "System", $"{Context.ConnectionId} joined {room.RoomName}");
+            await Clients.Group(room.RoomName).SendAsync("ReceiveMessageNewMem", userViewModel);
         }
 
         public async Task LeaveRoom(int roomId, string userId)
@@ -161,11 +169,13 @@ namespace ChatChit.Hubs
             var userRoom = await _context.UserRooms.Where(ur => ur.RoomId == roomId && ur.UserId == userId).FirstOrDefaultAsync();
             _context.UserRooms.Remove(userRoom);
             await _context.SaveChangesAsync();
+            var user = await _context.Users.FindAsync(userId);
+            var userViewModel = _mapper.Map<User, UserViewModel>(user);
             var room = await _context.Rooms.FindAsync(roomId);
             var roomViewModel = _mapper.Map<Room, RoomViewModel>(room);
             await Groups.RemoveFromGroupAsync(Context.ConnectionId, room.RoomName);
             await Clients.All.SendAsync("LeaveGroup" + userId, roomViewModel);
-            await Clients.Group(room.RoomName).SendAsync("ReceiveMessage", "System", $"{Context.ConnectionId} left {room.RoomName}");
+            await Clients.Group(room.RoomName).SendAsync("ReceiveMessageUserLeaveRoom", userViewModel);
         }
 
         public async Task RemoveUserToRoom(int roomId, string userId)

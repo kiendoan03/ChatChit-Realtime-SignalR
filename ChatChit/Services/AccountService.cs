@@ -1,8 +1,10 @@
-﻿using ChatChit.Models;
+﻿using ChatChit.Hubs;
+using ChatChit.Models;
 using ChatChit.Services.Interfaces;
 using ChatChit.ViewModel;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using static ChatChit.ViewModel.AccountViewModel;
 
@@ -13,12 +15,14 @@ namespace ChatChit.Services
         private readonly ITokenService _tokenService;
         private readonly SignInManager<User> _signInManager;
         private readonly UserManager<User> _userManager;
+        private readonly IHubContext<ChatHub> _hubContext;
 
-        public AccountService(ITokenService tokenService, SignInManager<User> signInManager, UserManager<User> userManager)
+        public AccountService(ITokenService tokenService, SignInManager<User> signInManager, UserManager<User> userManager, IHubContext<ChatHub> hubContext)
         {
             _tokenService = tokenService;
             _signInManager = signInManager;
             _userManager = userManager;
+            _hubContext = hubContext;
         }
 
         public async Task<UserViewModel> Login([FromBody] LoginViewModel loginViewModel)
@@ -83,6 +87,9 @@ namespace ChatChit.Services
                 Avatar = user.Avatar,
                 Token = await _tokenService.CreateTokenAsync(user)
             };
+
+            await _hubContext.Clients.All.SendAsync("newUser", userViewModel);
+
             return userViewModel;
         }
     }
