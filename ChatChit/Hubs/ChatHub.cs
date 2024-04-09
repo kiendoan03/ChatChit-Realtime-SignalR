@@ -189,6 +189,35 @@ namespace ChatChit.Hubs
             await Clients.Group(room.RoomName).SendAsync("ReceiveMessage", "System", $"{Context.ConnectionId} left {room.RoomName}");
         }
 
+        public async Task GetLastMessageInLobby()
+        {
+            var message = await _context.Messages.Include(m => m.FromUser).Where(m => m.RoomId == null && m.ToUserId == null).OrderByDescending(m => m.SendAt).FirstOrDefaultAsync();
+            var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
+            await Clients.Caller.SendAsync("ReceiveLastMessageInLobby", messageViewModel);
+        }   
+
+        public async Task GetLastMessageInRoom(int roomId)
+        {
+            //int.TryParse(roomId, out int roomIdInt);
+            var message = await _context.Messages.Include(m => m.FromUser).Include(m => m.ToRoom).Where(m => m.RoomId == roomId).OrderByDescending(m => m.SendAt).FirstOrDefaultAsync();
+            var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
+            await Clients.Caller.SendAsync("ReceiveLastMessageInRoom" + roomId, messageViewModel);
+        }
+        
+        public async Task GetLastMessagePrivate(string senderId, string receiverId)
+        {
+            var message = await _context.Messages.Include(m => m.FromUser).Where(m => m.FromUserId == senderId && m.ToUserId == receiverId || m.FromUserId == receiverId && m.ToUserId == senderId).OrderByDescending(m => m.SendAt).FirstOrDefaultAsync();
+            var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
+            await Clients.Caller.SendAsync("ReceiveLastMessagePrivate" + senderId + receiverId, messageViewModel);
+        }
+
+        public override async Task OnDisconnectedAsync(Exception exception)
+        {
+            var user = await _context.Users.FindAsync(Context.ConnectionId);
+            await Clients.All.SendAsync("ReceiveMessageDisconnect", "System", $"{Context.ConnectionId} left the chat");
+            await base.OnDisconnectedAsync(exception);
+        }
+
         private string IdentityName
         {
             get { return Context.User.Identity.Name; }
