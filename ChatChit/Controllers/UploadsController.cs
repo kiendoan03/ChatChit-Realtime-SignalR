@@ -50,7 +50,6 @@ namespace ChatChit.Controllers
         }
 
         [HttpPost]
-        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadToRoom([FromForm] UploadViewModelToRoom viewModelToRoom)
         {
             if (ModelState.IsValid)
@@ -69,10 +68,7 @@ namespace ChatChit.Controllers
                     await viewModelToRoom.File.CopyToAsync(fileStream);
                 }
 
-                //var user = _context.Users.Where(u => u.UserName == User.Identity.Name).FirstOrDefault();
                 var room = _context.Rooms.Where(r => r.Id == viewModelToRoom.RoomId).FirstOrDefault();
-                //if (user == null || room == null)
-                //    return NotFound();
 
                 string htmlImage = string.Format(
                     "<a href=\"/uploads/{0}\" target=\"_blank\">" +
@@ -90,7 +86,6 @@ namespace ChatChit.Controllers
                 await _context.Messages.AddAsync(message);
                 await _context.SaveChangesAsync();
 
-                // Send image-message to group
                 var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
                 await _hubContext.Clients.Group(room.RoomName).SendAsync("newMessage", messageViewModel);
 
@@ -101,7 +96,6 @@ namespace ChatChit.Controllers
         }
 
         [HttpPost]
-        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadToUser([FromForm] UploadViewModelToUser viewModelToUser)
         {
             if (ModelState.IsValid)
@@ -120,10 +114,7 @@ namespace ChatChit.Controllers
                     await viewModelToUser.File.CopyToAsync(fileStream);
                 }
 
-                //var user = _context.Users.Where(u => u.UserName == User.Identity.Name).FirstOrDefault();
                 var toUser = _context.Users.Where(u => u.Id == viewModelToUser.ToUserId).FirstOrDefault();
-                //if (user == null || toUser == null)
-                //    return NotFound();
 
                 string htmlImage = string.Format(
                                        "<a href=\"/uploads/{0}\" target=\"_blank\">" +
@@ -141,7 +132,6 @@ namespace ChatChit.Controllers
                 await _context.Messages.AddAsync(message);
                 await _context.SaveChangesAsync();
 
-                // Send image-message to user
                 var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
                 await _hubContext.Clients.User(toUser.UserName).SendAsync("newMessage", messageViewModel);
 
@@ -152,7 +142,6 @@ namespace ChatChit.Controllers
         }
 
         [HttpPost]
-        //[ValidateAntiForgeryToken]
         public async Task<IActionResult> UploadToLobby([FromForm] UploadViewModelToLobby viewModelToLobby)
         {
             if (ModelState.IsValid)
@@ -171,10 +160,6 @@ namespace ChatChit.Controllers
                     await viewModelToLobby.File.CopyToAsync(fileStream);
                 }
 
-                //var user = _context.Users.Where(u => u.UserName == User.Identity.Name).FirstOrDefault();
-                //if (user == null)
-                //    return NotFound();
-
                 string htmlImage = string.Format(
                                        "<a href=\"/uploads/{0}\" target=\"_blank\">" +
                                                           "<img src=\"/uploads/{0}\" class=\"post-image\">" +
@@ -190,7 +175,6 @@ namespace ChatChit.Controllers
                 await _context.Messages.AddAsync(message);
                 await _context.SaveChangesAsync();
 
-                // Send image-message to all
                 var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
                 await _hubContext.Clients.All.SendAsync("newMessage", messageViewModel);
 
