@@ -11,11 +11,13 @@ using ChatChit.Models;
 using ChatChit.ViewModel;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Hosting;
+using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.Extensions.Configuration;
 using static ChatChit.ViewModel.UploadViewModel;
+using static Microsoft.EntityFrameworkCore.DbLoggerCategory.Database;
 
 namespace ChatChit.Controllers
 {
@@ -71,8 +73,8 @@ namespace ChatChit.Controllers
                 var room = _context.Rooms.Where(r => r.Id == viewModelToRoom.RoomId).FirstOrDefault();
 
                 string htmlImage = string.Format(
-                    "<a href=\"/uploads/{0}\" target=\"_blank\">" +
-                    "<img src=\"/uploads/{0}\" class=\"post-image\">" +
+                    "<a href=\"https://localhost:7014/uploads/{0}\" target=\"_blank\">" +
+                    "<img src=\"https://localhost:7014/uploads/{0}\" class=\"post-image\">" +
                     "</a>", fileName);
 
                 var message = new Message()
@@ -82,14 +84,15 @@ namespace ChatChit.Controllers
                     FromUserId = viewModelToRoom.FromUserId,
                     RoomId = viewModelToRoom.RoomId
                 };
+                var user = await _context.Users.FindAsync(viewModelToRoom.FromUserId);
 
                 await _context.Messages.AddAsync(message);
                 await _context.SaveChangesAsync();
 
                 var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
-                await _hubContext.Clients.Group(room.RoomName).SendAsync("newMessage", messageViewModel);
+                await _hubContext.Clients.Group(room.RoomName).SendAsync("ReceiveMessageRoom" + viewModelToRoom.RoomId, messageViewModel);
 
-                return Ok();
+                return Ok(messageViewModel.Content);
             }
 
             return BadRequest();
@@ -117,8 +120,8 @@ namespace ChatChit.Controllers
                 var toUser = _context.Users.Where(u => u.Id == viewModelToUser.ToUserId).FirstOrDefault();
 
                 string htmlImage = string.Format(
-                                       "<a href=\"/uploads/{0}\" target=\"_blank\">" +
-                                                          "<img src=\"/uploads/{0}\" class=\"post-image\">" +
+                                       "<a href=\"https://localhost:7014/uploads/{0}\" target=\"_blank\">" +
+                                                          "<img src=\"https://localhost:7014/uploads/{0}\" class=\"post-image\">" +
                                                                              "</a>", fileName);
 
                 var message = new Message()
@@ -128,14 +131,19 @@ namespace ChatChit.Controllers
                     FromUserId = viewModelToUser.FromUserId,
                     ToUserId = viewModelToUser.ToUserId
                 };
+                var user = await _context.Users.FindAsync(viewModelToUser.FromUserId);
 
                 await _context.Messages.AddAsync(message);
                 await _context.SaveChangesAsync();
-
+                var httpContext = HttpContext;
+                var connectionId = httpContext.Connection.Id;
                 var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
-                await _hubContext.Clients.User(toUser.UserName).SendAsync("newMessage", messageViewModel);
+                //await _hubContext.Clients.User(toUser.UserName).SendAsync("newMessage", messageViewModel);
+                await _hubContext.Clients.All.SendAsync("ReceiveMessagePrivate" + viewModelToUser.ToUserId, messageViewModel);
+                await _hubContext.Clients.All.SendAsync("ReceiveMessagePrivate" + viewModelToUser.FromUserId, messageViewModel);
+                //await _hubContext.Clients.Client(connectionId).SendAsync("ReceiveMessagePrivate", messageViewModel);
 
-                return Ok();
+                return Ok(messageViewModel.Content);
             }
 
             return BadRequest();
@@ -161,8 +169,8 @@ namespace ChatChit.Controllers
                 }
 
                 string htmlImage = string.Format(
-                                       "<a href=\"/uploads/{0}\" target=\"_blank\">" +
-                                                          "<img src=\"/uploads/{0}\" class=\"post-image\">" +
+                                       "<a href=\"https://localhost:7014/uploads/{0}\" target=\"_blank\">" +
+                                                          "<img src=\"https://localhost:7014/uploads/{0}\" class=\"post-image\">" +
                                                                              "</a>", fileName);
 
                 var message = new Message()
@@ -171,14 +179,16 @@ namespace ChatChit.Controllers
                     SendAt = DateTime.Now,
                     FromUserId = viewModelToLobby.FromUserId
                 };
+                var user = await _context.Users.FindAsync(viewModelToLobby.FromUserId);
 
                 await _context.Messages.AddAsync(message);
                 await _context.SaveChangesAsync();
 
                 var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
-                await _hubContext.Clients.All.SendAsync("newMessage", messageViewModel);
+                await _hubContext.Clients.All.SendAsync("ReceiveMessage", messageViewModel);
+                //await Clients.All.SendAsync("ReceiveMessage", messageViewModel);
 
-                return Ok();
+                return Ok(messageViewModel.Content);
             }
 
             return BadRequest();

@@ -23,7 +23,7 @@ namespace ChatChit.Hubs
         }
         public override async Task OnConnectedAsync()
         {
-            await Clients.All.SendAsync("ReceiveMessageConnect", "System", $"{Context.ConnectionId} joined the chat");
+            await Clients.All.SendAsync("ReceiveMessageConnect", Context.ConnectionId);
             await base.OnConnectedAsync();
         }
 
