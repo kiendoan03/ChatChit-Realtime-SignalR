@@ -47,48 +47,49 @@ namespace ChatChit.Hubs
             //var messages = await _context.Messages.Where(m => m.RoomId == null && m.ToUserId == null).Include(m => m.FromUser).ToListAsync();
             //var messagesViewModel = _mapper.Map<List<Message>, List<MessageViewModel>>(messages);
             //await Clients.Caller.SendAsync("ReceiveChatHistoryLobby", messagesViewModel);
-            var messages = await _context.Messages.Where(m => m.RoomId == null && m.ToUserId == null).Include(m => m.FromUser).ToListAsync();
+            var messages = await _context.Messages.Where(m => m.RoomId == null && m.ToUserId == null).Include(m => m.FromUser).Include(m => m.Parent).ToListAsync();
             var messagesViewModel = _mapper.Map<List<Message>, List<MessageViewModel>>(messages);
             await Clients.Caller.SendAsync("ReceiveChatHistoryLobby", messagesViewModel);
         }
 
-        private bool IsBase64Image(string data)
-        {
-            return data.StartsWith("data:image/");
-        }
-
-        //public async Task SendImageCopy(UploadViewModelToLobby viewModelToLobby)
-        //{
-        //    var user = await _context.Users.FindAsync(viewModelToLobby.FromUserId);
-
-        //    var mgs = new Message
-        //    {
-        //        FromUserId = viewModelToLobby.FromUserId,
-        //        //ImageData = image,
-        //        SendAt = DateTime.Now
-        //    };
-        //    _context.Messages.Add(mgs);
-        //    await _context.SaveChangesAsync();
-
-        //    var messageViewModel = _mapper.Map<Message, MessageViewModel>(mgs);
-        //    await Clients.All.SendAsync("ReceiveMessage", messageViewModel);
-        //}
-
-        public async Task SendMessage(string userId, string message)
+        public async Task SendMessage(string userId, string message, int? parentId)
         {
             var user = await _context.Users.FindAsync(userId);
-
-            var mgs = new Message
+            if(parentId != null)
             {
-                FromUserId = userId,
-                Content = Regex.Replace(message, @"<.*?>", string.Empty),
-                SendAt = DateTime.Now
-            };
-            _context.Messages.Add(mgs);
-            await _context.SaveChangesAsync();
-            var messageViewModel = _mapper.Map<Message, MessageViewModel>(mgs);
-            //await Clients.All.SendAsync("ReceiveMessage", user.DisplayName, message);
-            await Clients.All.SendAsync("ReceiveMessage", messageViewModel);
+                var parent = await _context.Messages.FindAsync(parentId);
+                if (parent == null)
+                {
+                    Console.WriteLine("Parent message not found!");
+                    return;
+                }
+                var mgs = new Message
+                {
+                    FromUserId = userId,
+                    Content = Regex.Replace(message, @"<.*?>", string.Empty),
+                    SendAt = DateTime.Now,
+                    ParentId = parentId
+                };
+                _context.Messages.Add(mgs);
+                await _context.SaveChangesAsync();
+                var messageViewModel = _mapper.Map<Message, MessageViewModel>(mgs);
+                //await Clients.All.SendAsync("ReceiveMessage", user.DisplayName, message);
+                await Clients.All.SendAsync("ReceiveMessage", messageViewModel);
+            }
+            else
+            {
+                var mgs = new Message
+                    {
+                        FromUserId = userId,
+                        Content = Regex.Replace(message, @"<.*?>", string.Empty),
+                        SendAt = DateTime.Now
+                    };
+                _context.Messages.Add(mgs);
+                await _context.SaveChangesAsync();
+                var messageViewModel = _mapper.Map<Message, MessageViewModel>(mgs);
+                //await Clients.All.SendAsync("ReceiveMessage", user.DisplayName, message);
+                await Clients.All.SendAsync("ReceiveMessage", messageViewModel);
+            }
         }
 
         public async Task SendPrivate(string fromUserId, string toUserId, string message)

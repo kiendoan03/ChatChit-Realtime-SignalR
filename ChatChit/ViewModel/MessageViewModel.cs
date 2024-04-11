@@ -9,5 +9,6 @@
         public string ToUser { get; set; } = null!;
         public string Room { get; set; } = null!;
         public string Avatar { get; set; } = null!;
+        public string Parent { get; set; } = null!;
     }
 }

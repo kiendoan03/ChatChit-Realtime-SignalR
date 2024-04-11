@@ -49,7 +49,12 @@ namespace ChatChit.DAL
             modelBuilder.Entity<Room>()
                 .HasOne(r => r.Admin)
                 .WithMany(u => u.Rooms);
-                
+
+            modelBuilder.Entity<Message>()
+                 .HasOne(m => m.Parent)
+                 .WithMany()
+                 .HasForeignKey(m => m.ParentId)
+                 .OnDelete(DeleteBehavior.Restrict);
         }
     }
 }

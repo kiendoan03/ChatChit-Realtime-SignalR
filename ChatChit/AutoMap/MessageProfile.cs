@@ -14,7 +14,8 @@ namespace ChatChit.AutoMap
                 .ForMember(dest => dest.ToUser, opt => opt.MapFrom(src => src.ToUser.DisplayName))
                 .ForMember(dest => dest.Room, opt => opt.MapFrom(src => src.ToRoom.RoomName))
                 .ForMember(dest => dest.Avatar, opt => opt.MapFrom(src => src.FromUser.Avatar))
-                .ForMember(dest => dest.Content, opt => opt.MapFrom(x => BasicEmojis.ParseEmojis(x.Content)));
+                .ForMember(dest => dest.Content, opt => opt.MapFrom(x => BasicEmojis.ParseEmojis(x.Content)))
+                .ForMember(dest => dest.Parent, opt => opt.MapFrom(src => src.Parent.Content));
 
             CreateMap<MessageViewModel, Message>();
         }

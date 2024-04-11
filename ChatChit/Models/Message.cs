@@ -11,5 +11,7 @@
         public User ToUser { get; set; } = null!;
         public int? RoomId { get; set; }
         public Room ToRoom { get; set; } = null!;
+        public int? ParentId { get; set; }
+        public Message Parent { get; set; } = null!;
     }
 }
