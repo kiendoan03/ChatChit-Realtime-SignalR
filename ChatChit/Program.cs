@@ -99,7 +99,7 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 builder.Services.AddTransient<IUnitOfWork, UnitOfWork>();
-
+builder. Services.AddHttpClient();
 builder.Services.AddScoped<ITokenService, TokenService>();  
 builder.Services.AddScoped<IAccountService, AccountService>();
 builder.Services.AddScoped<IUserService, UserService>();

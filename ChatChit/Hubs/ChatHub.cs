@@ -5,6 +5,8 @@ using ChatChit.ViewModel;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 using System.Text.RegularExpressions;
+using static ChatChit.ViewModel.UploadViewModel;
+using static System.Net.Mime.MediaTypeNames;
 
 namespace ChatChit.Hubs
 {
@@ -50,9 +52,32 @@ namespace ChatChit.Hubs
             await Clients.Caller.SendAsync("ReceiveChatHistoryLobby", messagesViewModel);
         }
 
+        private bool IsBase64Image(string data)
+        {
+            return data.StartsWith("data:image/");
+        }
+
+        //public async Task SendImageCopy(UploadViewModelToLobby viewModelToLobby)
+        //{
+        //    var user = await _context.Users.FindAsync(viewModelToLobby.FromUserId);
+
+        //    var mgs = new Message
+        //    {
+        //        FromUserId = viewModelToLobby.FromUserId,
+        //        //ImageData = image,
+        //        SendAt = DateTime.Now
+        //    };
+        //    _context.Messages.Add(mgs);
+        //    await _context.SaveChangesAsync();
+
+        //    var messageViewModel = _mapper.Map<Message, MessageViewModel>(mgs);
+        //    await Clients.All.SendAsync("ReceiveMessage", messageViewModel);
+        //}
+
         public async Task SendMessage(string userId, string message)
         {
             var user = await _context.Users.FindAsync(userId);
+
             var mgs = new Message
             {
                 FromUserId = userId,
