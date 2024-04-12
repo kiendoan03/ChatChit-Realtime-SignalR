@@ -70,6 +70,7 @@ namespace ChatChit.Hubs
                     SendAt = DateTime.Now,
                     ParentId = parentId
                 };
+                var ownerParent = await _context.Users.FindAsync(parent.FromUserId);
                 _context.Messages.Add(mgs);
                 await _context.SaveChangesAsync();
                 var messageViewModel = _mapper.Map<Message, MessageViewModel>(mgs);
