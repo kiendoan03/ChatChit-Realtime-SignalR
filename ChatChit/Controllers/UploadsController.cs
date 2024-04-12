@@ -173,22 +173,48 @@ namespace ChatChit.Controllers
                                                           "<img src=\"https://localhost:7014/uploads/{0}\" class=\"post-image\">" +
                                                                              "</a>", fileName);
 
-                var message = new Message()
+                if (viewModelToLobby.ParentId != null)
                 {
-                    Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|/img).*?>", string.Empty),
-                    SendAt = DateTime.Now,
-                    FromUserId = viewModelToLobby.FromUserId
-                };
-                var user = await _context.Users.FindAsync(viewModelToLobby.FromUserId);
+                    var messageParent = await _context.Messages.FindAsync(viewModelToLobby.ParentId);
+                    var message = new Message()
+                    {
+                        Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|/img).*?>", string.Empty),
+                        SendAt = DateTime.Now,
+                        FromUserId = viewModelToLobby.FromUserId,
+                        ParentId = viewModelToLobby.ParentId
+                    };
+                    var user = await _context.Users.FindAsync(viewModelToLobby.FromUserId);
+                    var ownerParent = await _context.Users.FindAsync(messageParent.FromUserId);
 
-                await _context.Messages.AddAsync(message);
-                await _context.SaveChangesAsync();
+                    await _context.Messages.AddAsync(message);
+                    await _context.SaveChangesAsync();
 
-                var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
-                await _hubContext.Clients.All.SendAsync("ReceiveMessage", messageViewModel);
-                //await Clients.All.SendAsync("ReceiveMessage", messageViewModel);
+                    var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
+                    await _hubContext.Clients.All.SendAsync("ReceiveMessage", messageViewModel);
+                    //await Clients.All.SendAsync("ReceiveMessage", messageViewModel);
 
-                return Ok(messageViewModel.Content);
+                    return Ok(messageViewModel.Content);
+                }
+                else
+                {
+                    var message = new Message()
+                    {
+                        Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|/img).*?>", string.Empty),
+                        SendAt = DateTime.Now,
+                        FromUserId = viewModelToLobby.FromUserId
+                    };
+                    var user = await _context.Users.FindAsync(viewModelToLobby.FromUserId);
+
+                    await _context.Messages.AddAsync(message);
+                    await _context.SaveChangesAsync();
+
+                    var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
+                    await _hubContext.Clients.All.SendAsync("ReceiveMessage", messageViewModel);
+                    //await Clients.All.SendAsync("ReceiveMessage", messageViewModel);
+
+                    return Ok(messageViewModel.Content);
+                }
+               
             }
 
             return BadRequest();

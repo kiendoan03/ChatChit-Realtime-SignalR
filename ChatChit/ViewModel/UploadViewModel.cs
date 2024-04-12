@@ -30,6 +30,7 @@ namespace ChatChit.ViewModel
             public string FromUserId { get; set; }
             [Required]
             public IFormFile File { get; set; }
+            public int? ParentId { get; set; }
         }
     }
 }
