@@ -150,26 +150,51 @@ namespace ChatChit.Controllers
                                                           "<img src=\"https://localhost:7014/uploads/{0}\" class=\"post-image\">" +
                                                                              "</a>", fileName);
 
-                var message = new Message()
+                if(viewModelToUser.ParentId != null)
                 {
-                    Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|/img).*?>", string.Empty),
-                    SendAt = DateTime.Now,
-                    FromUserId = viewModelToUser.FromUserId,
-                    ToUserId = viewModelToUser.ToUserId
-                };
-                var user = await _context.Users.FindAsync(viewModelToUser.FromUserId);
+                    var messageParent = await _context.Messages.FindAsync(viewModelToUser.ParentId);
+                    var message = new Message()
+                    {
+                        Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|/img).*?>", string.Empty),
+                        SendAt = DateTime.Now,
+                        FromUserId = viewModelToUser.FromUserId,
+                        ToUserId = viewModelToUser.ToUserId,
+                        ParentId = viewModelToUser.ParentId
+                    };
+                    var user = await _context.Users.FindAsync(viewModelToUser.FromUserId);
+                    var ownerParent = await _context.Users.FindAsync(messageParent.FromUserId);
 
-                await _context.Messages.AddAsync(message);
-                await _context.SaveChangesAsync();
-                var httpContext = HttpContext;
-                var connectionId = httpContext.Connection.Id;
-                var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
-                //await _hubContext.Clients.User(toUser.UserName).SendAsync("newMessage", messageViewModel);
-                await _hubContext.Clients.All.SendAsync("ReceiveMessagePrivate" + viewModelToUser.ToUserId, messageViewModel);
-                await _hubContext.Clients.All.SendAsync("ReceiveMessagePrivate" + viewModelToUser.FromUserId, messageViewModel);
-                //await _hubContext.Clients.Client(connectionId).SendAsync("ReceiveMessagePrivate", messageViewModel);
+                    await _context.Messages.AddAsync(message);
+                    await _context.SaveChangesAsync();
+                    var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
+                    await _hubContext.Clients.All.SendAsync("ReceiveMessagePrivate" + viewModelToUser.ToUserId, messageViewModel);
+                    await _hubContext.Clients.All.SendAsync("ReceiveMessagePrivate" + viewModelToUser.FromUserId, messageViewModel);
 
-                return Ok(messageViewModel.Content);
+                    return Ok(messageViewModel.Content);
+                }
+                else
+                {
+                    var message = new Message()
+                    {
+                        Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|/img).*?>", string.Empty),
+                        SendAt = DateTime.Now,
+                        FromUserId = viewModelToUser.FromUserId,
+                        ToUserId = viewModelToUser.ToUserId
+                    };
+                    var user = await _context.Users.FindAsync(viewModelToUser.FromUserId);
+
+                    await _context.Messages.AddAsync(message);
+                    await _context.SaveChangesAsync();
+                    var httpContext = HttpContext;
+                    var connectionId = httpContext.Connection.Id;
+                    var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
+                    //await _hubContext.Clients.User(toUser.UserName).SendAsync("newMessage", messageViewModel);
+                    await _hubContext.Clients.All.SendAsync("ReceiveMessagePrivate" + viewModelToUser.ToUserId, messageViewModel);
+                    await _hubContext.Clients.All.SendAsync("ReceiveMessagePrivate" + viewModelToUser.FromUserId, messageViewModel);
+                    //await _hubContext.Clients.Client(connectionId).SendAsync("ReceiveMessagePrivate", messageViewModel);
+
+                    return Ok(messageViewModel.Content);
+                }
             }
 
             return BadRequest();

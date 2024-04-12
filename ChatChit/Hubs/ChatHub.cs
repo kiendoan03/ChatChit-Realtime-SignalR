@@ -4,6 +4,7 @@ using ChatChit.Models;
 using ChatChit.ViewModel;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
+using System.Diagnostics;
 using System.Text.RegularExpressions;
 using static ChatChit.ViewModel.UploadViewModel;
 using static System.Net.Mime.MediaTypeNames;
@@ -93,30 +94,52 @@ namespace ChatChit.Hubs
             }
         }
 
-        public async Task SendPrivate(string fromUserId, string toUserId, string message)
+        public async Task SendPrivate(string fromUserId, string toUserId, string message, int? parentId)
         {
             //var fromUserId = Context.ConnectionId;
             var sender = await _context.Users.FindAsync(fromUserId);
             var receiver = await _context.Users.FindAsync(toUserId);
 
-            var mgs = new Message
+            if(parentId != null)
             {
-                FromUserId = fromUserId,
-                ToUserId = toUserId,
-                Content = Regex.Replace(message, @"<.*?>", string.Empty),
-                SendAt = DateTime.Now
-            };
-            _context.Messages.Add(mgs);
-            await _context.SaveChangesAsync();
-            var messageViewModel = _mapper.Map<Message, MessageViewModel>(mgs);
+                var mgs = new Message
+                {
+                    FromUserId = fromUserId,
+                    ToUserId = toUserId,
+                    Content = Regex.Replace(message, @"<.*?>", string.Empty),
+                    SendAt = DateTime.Now,
+                    ParentId = parentId
+                };
+                var parent = await _context.Messages.FindAsync(parentId);
+                var ownerParent = await _context.Users.FindAsync(parent.FromUserId);
+                _context.Messages.Add(mgs);
+                await _context.SaveChangesAsync();
+                var messageViewModel = _mapper.Map<Message, MessageViewModel>(mgs);
 
-            await Clients.All.SendAsync("ReceiveMessagePrivate" + toUserId, messageViewModel);
-            await Clients.Caller.SendAsync("ReceiveMessagePrivate", messageViewModel);
+                await Clients.All.SendAsync("ReceiveMessagePrivate" + toUserId, messageViewModel);
+                await Clients.Caller.SendAsync("ReceiveMessagePrivate", messageViewModel);
+            }
+            else
+            {
+                var mgs = new Message
+                {
+                    FromUserId = fromUserId,
+                    ToUserId = toUserId,
+                    Content = Regex.Replace(message, @"<.*?>", string.Empty),
+                    SendAt = DateTime.Now
+                };
+                _context.Messages.Add(mgs);
+                await _context.SaveChangesAsync();
+                var messageViewModel = _mapper.Map<Message, MessageViewModel>(mgs);
+
+                await Clients.All.SendAsync("ReceiveMessagePrivate" + toUserId, messageViewModel);
+                await Clients.Caller.SendAsync("ReceiveMessagePrivate", messageViewModel);
+            }
         }
 
         public async Task GetHistoryChatPrivate(string senderId, string receiveId)
         {
-            var messages = await _context.Messages.Where(m => m.FromUserId == senderId && m.ToUserId == receiveId || m.FromUserId == receiveId && m.ToUserId == senderId).Include(m => m.FromUser).ToListAsync();
+            var messages = await _context.Messages.Where(m => m.FromUserId == senderId && m.ToUserId == receiveId || m.FromUserId == receiveId && m.ToUserId == senderId).Include(m => m.FromUser).Include(m => m.Parent).ToListAsync();
             var messagesViewModel = _mapper.Map<List<Message>, List<MessageViewModel>>(messages);
             await Clients.Caller.SendAsync("ReceiveChatHistoryPrivate", messagesViewModel);
         }
