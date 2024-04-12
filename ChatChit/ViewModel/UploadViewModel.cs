@@ -12,6 +12,8 @@ namespace ChatChit.ViewModel
             public int RoomId { get; set; }
             [Required]
             public IFormFile File { get; set; }
+            public int? ParentId { get; set; }
+
         }
 
         public class UploadViewModelToUser

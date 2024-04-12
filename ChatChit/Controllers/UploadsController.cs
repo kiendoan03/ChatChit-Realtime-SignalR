@@ -77,24 +77,50 @@ namespace ChatChit.Controllers
                     "<img src=\"https://localhost:7014/uploads/{0}\" class=\"post-image\">" +
                     "</a>", fileName);
 
-                var message = new Message()
+                if (viewModelToRoom.ParentId != null)
+                {  
+                    var messageParent = await _context.Messages.FindAsync(viewModelToRoom.ParentId);
+                    
+                    var message = new Message()
+                    {
+                        Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|/img).*?>", string.Empty),
+                        SendAt = DateTime.Now,
+                        FromUserId = viewModelToRoom.FromUserId,
+                        RoomId = viewModelToRoom.RoomId,
+                        ParentId = viewModelToRoom.ParentId
+                    };
+                    var user = await _context.Users.FindAsync(viewModelToRoom.FromUserId);
+                  
+                    var ownerParent = await _context.Users.FindAsync(messageParent.FromUserId);
+
+                    await _context.Messages.AddAsync(message);
+                    await _context.SaveChangesAsync();
+                            
+                    var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
+                    await _hubContext.Clients.Group(room.RoomName).SendAsync("ReceiveMessageRoom" + viewModelToRoom.RoomId, messageViewModel);
+
+                    return Ok(messageViewModel.Content);
+                }
+                else
                 {
-                    Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|/img).*?>", string.Empty),
-                    SendAt = DateTime.Now,
-                    FromUserId = viewModelToRoom.FromUserId,
-                    RoomId = viewModelToRoom.RoomId
-                };
-                var user = await _context.Users.FindAsync(viewModelToRoom.FromUserId);
+                    var message = new Message()
+                    {
+                        Content = Regex.Replace(htmlImage, @"(?i)<(?!img|a|/a|/img).*?>", string.Empty),
+                        SendAt = DateTime.Now,
+                        FromUserId = viewModelToRoom.FromUserId,
+                        RoomId = viewModelToRoom.RoomId
+                    };
+                    var user = await _context.Users.FindAsync(viewModelToRoom.FromUserId);
 
-                await _context.Messages.AddAsync(message);
-                await _context.SaveChangesAsync();
+                    await _context.Messages.AddAsync(message);
+                    await _context.SaveChangesAsync();
 
-                var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
-                await _hubContext.Clients.Group(room.RoomName).SendAsync("ReceiveMessageRoom" + viewModelToRoom.RoomId, messageViewModel);
+                    var messageViewModel = _mapper.Map<Message, MessageViewModel>(message);
+                    await _hubContext.Clients.Group(room.RoomName).SendAsync("ReceiveMessageRoom" + viewModelToRoom.RoomId, messageViewModel);
 
-                return Ok(messageViewModel.Content);
+                    return Ok(messageViewModel.Content);
+                }
             }
-
             return BadRequest();
         }
 
